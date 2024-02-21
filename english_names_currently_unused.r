@@ -27,7 +27,7 @@ eng_to_csv_take_2 <- function(path) { # modifying the Greek function:
                length(banter))
   
   # Names:
-  names <- xml_text(xml_find_all(tlg, xpath = "//@who"))
+  names <- gsub("Friend","Companion", xml_text(xml_find_all(tlg, xpath = "//@who")))
   
   # 
   #   # Num. o/ words per banter:
@@ -110,14 +110,17 @@ eng_dialogues <- bind_rows(df_list)
 
 pattern <- ".*#.*#"
 
-eng_names <- unique(eng_dialogues$names)
+eng_names <- eng_dialogues$names[!grepl(pattern,eng_dialogues$names)]
+eng_names <- gsub("#","", eng_names)
+eng_names <- unique(eng_names)
 
-eng_names <- eng_names[!grepl(pattern,eng_names)]
 
 # Use grepl to find items matching the pattern, and negate the result to filter them out
 
-greek_names <- unique(socratic_dialogues$names)
-greek_names <- greek_names[!grepl(pattern, greek_names)]
+greek_names <- socratic_dialogues$names[!grepl(pattern, socratic_dialogues$names)]
+# greek_names <- gsub("#","", greek_names) this is what I'll need, but I want to 
+# be able to join this dataframe to the greek one to make things easier
+greek_names <- unique(greek_names)
 
 max_length <- max(length(eng_names), length(greek_names))
 
@@ -128,6 +131,5 @@ greek_names_padded <- c(greek_names, rep(NA, max_length - length(greek_names)))
 # Create the dataframe
 name_comparison <- data.frame(English = eng_names_padded, Greek = greek_names_padded)
 
-# Combine into a data frame
-
-# saveRDS(socratic_dialogues_english, "C:\\Users\\Ben\\Desktop\\socratic_dialogues_english.rds")
+# Save the names to be joined later if need be
+saveRDS(name_comparison, "C:\\Users\\Ben\\Desktop\\name_comparison.rds")
