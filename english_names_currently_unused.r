@@ -105,13 +105,28 @@ for (subdir in subdirs) {
   }
 }
 
+
 eng_dialogues <- bind_rows(df_list)
 
+pattern <- ".*#.*#"
 
-eng_titles <- unique(eng_dialogues$work_title)
+eng_names <- unique(eng_dialogues$names)
 
-greek_titles <- unique(socratic_dialogues$work_title)
+eng_names <- eng_names[!grepl(pattern,eng_names)]
 
+# Use grepl to find items matching the pattern, and negate the result to filter them out
+
+greek_names <- unique(socratic_dialogues$names)
+greek_names <- greek_names[!grepl(pattern, greek_names)]
+
+max_length <- max(length(eng_names), length(greek_names))
+
+# Pad the shorter list with NA to match the length of the longer list
+eng_names_padded <- c(eng_names, rep(NA, max_length - length(eng_names)))
+greek_names_padded <- c(greek_names, rep(NA, max_length - length(greek_names)))
+
+# Create the dataframe
+name_comparison <- data.frame(English = eng_names_padded, Greek = greek_names_padded)
 
 # Combine into a data frame
 
