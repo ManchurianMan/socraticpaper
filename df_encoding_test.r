@@ -12,54 +12,191 @@ library(ggplot2)
 library(data.table)
 library(XML)
 
-count_occurrences <- function(banter, pattern) {
-  str_count(banter, pattern)
-}
-
-remove_duplicates_and_add_lecture_quotient <- function(df) {
-  df$duplicate <- ave(df$names, df$names, FUN = function(x) c(0, diff(as.integer(x == lag(x)))))
-  duplicate_indices <- which(df$duplicate == 1)
-  
-  for (i in duplicate_indices) {
-    cols_to_sum <- c("ge_present", "word_count", "dh_present", "non_idiom_ge", "panu_ge", "alla_present",
-                     "araq_present", "arac_present", "gar_present", "au_present", "oun_present", "mhn_present",
-                     "pou_present", "kaitoi_present", "mentoi_present", "oukoun_present", "per_present", "toinun_present", "men_present")
-    for (col in cols_to_sum) {
-      df[[col]][i+1] <- df[[col]][i] + df[[col]][i+1]
+removing_duplicates_adding_lecture_quotient <- function(df) {
+  df$duplicate <- 0
+  for (i in 2:nrow(df)) {
+    if (df$names[i] == df$names[i-1]) {
+      df$duplicate[i-1] <- 1
+      df$ge_present[i] <- df$ge_present[i] + df$ge_present[i-1]
+      df$word_count[i] <- df$word_count[i] + df$word_count[i-1]
+      df$dh_present[i] <- df$dh_present[i] + df$dh_present[i-1]
+      df$non_idiom_ge[i] <- df$non_idiom_ge[i] + df$non_idiom_ge[i-1]
+      df$panu_ge[i] <- df$panu_ge[i] + df$panu_ge[i-1]
+      df$alla_present[i] <- df$alla_present[i] + df$alla_present[i-1]
+      df$araq_present[i] <- df$araq_present[i] + df$araq_present[i-1]
+      df$arac_present[i] <- df$arac_present[i] + df$arac_present[i-1]
+      df$gar_present[i] <- df$gar_present[i] + df$gar_present[i-1]
+      df$au_present[i] <- df$au_present[i] + df$au_present[i-1]
+      df$oun_present[i] <- df$oun_present[i] + df$oun_present[i-1]
+      df$mhn_present[i] <- df$mhn_present[i] + df$mhn_present[i-1]
+      df$pou_present[i] <- df$pou_present[i] + df$pou_present[i-1]
+      df$kaitoi_present[i] <- df$kaitoi_present[i] + df$kaitoi_present[i-1]
+      df$mentoi_present[i] <- df$mentoi_present[i] + df$mentoi_present[i-1]
+      df$oukoun_present[i] <- df$oukoun_present[i] + df$oukoun_present[i-1]
+      df$per_present[i] <- df$per_present[i] +    df$per_present[i-1]
+      df$toinun_present[i] <- df$toinun_present[i] + df$toinun_present[i-1]
+      df$men_present[i] <- df$men_present[i] + df$men_present[i-1]
     }
   }
-  
-  df <- df[duplicate_indices + 1, ]
-  df$lecture_quotient <- (df$word_count - df$response)^2
-  
-  return(df)
+  df_2 <- subset(df, duplicate != 1)
+  df_2$lecture_quotient <- (df_2$word_count - df_2$response)^2
+  return(df_2)
 }
 
 greek_to_csv <- function(path) {
-  # Read and preprocess XML
-  tlg <- read_xml(path) %>% xml_ns_strip()
-  xml_remove(xml_find_all(tlg, "//revisionDesc"))
+  # Taking in the XML and touching it up:
+  tlg <- read_xml(path);
+  tlg %>% xml_ns_strip();
   
-  banter <- xml_text(xml_find_all(tlg, "//said[@who]"))
-  names <- xml_text(xml_find_all(tlg, "//@who"))
-  title <- rep(xml_text(xml_find_all(tlg, "//titleStmt/title")), length(banter))
+  xr <- xml_find_all(tlg, xpath = "//revisionDesc")
+  xml_remove(xr)
   
-  # Process banter
-  banter_length <- count_occurrences(banter, "\\w+")
-  response <- c(banter_length[-1], 0) # Shift banter length and append 0 for last
+  # Banter:
+  banter <- xml_text(xml_find_all(tlg, xpath = "//said[@who]"))
   
-  patterns <- list("γε" = "ge", "πάνυ γε" = "panu_ge", "εὐ γε" = "eu_ge", "δὴ" = "dh",
-                   "ἀλλά" = "alla", "ἀρα" = "ara", "γαρ" = "gar", "αὐ" = "au", "οὖν" = "oun",
-                   "μὴν" = "mhn", "ποῦ" = "pou", "καιτοι" = "kaitoi", "μεντοι" = "mentoi",
-                   "οὐκοῦν" = "oukoun", "περ" = "per", "τοίνυν" = "toinun", ";" = "question",
-                   " μὲν" = "men")
   
-  # Dynamically create columns based on patterns
-  for (pattern_name in names(patterns)) {
-    column_name <- patterns[pattern_name]
-    df[[column_name]] <- count_occurrences(banter, pattern_name)
+  # Title:
+  title <- rep(xml_text(xml_find_all(tlg, xpath = "//titleStmt/title")),
+               length(banter))
+  
+  # Names:
+  names <- xml_text(xml_find_all(tlg, xpath = "//@who"))
+  
+  
+  # Num. o/ words per banter:
+  banter_length <- list()
+  for (i in 1:length(banter)) {
+    banter_length[i] <- str_count(banter[i], "\\w+")    }
+  
+  
+  # Response per banter:
+  banter_response <- list()
+  for (i in 1:length(banter_length)) {
+    banter_response[i] <- (banter_length[i+1])
+  }
+  banter_response[length(banter_response)] <- 0
+  
+  
+  # Whether there is a ge:
+  ge <- list() 
+  for (i in 1:length(banter)) {
+    ge[i] <- str_count(banter[i], " \U03B3(\U03b5|\U03AD)[.,;· ]| \u03B3\u02BC")
   }
   
+  
+  # Panu ge:
+  panu_ge <- list()
+  for (i in 1:length(banter)) {
+    panu_ge[i] <- str_count(banter[i], "\U03C0\U03AC\U03BD\U03C5.\U03B3(\U03b5|\U03AD)")
+  }
+  
+  # eu ge: 
+  eu_ge <- list()
+  for (i in 1:length(banter)) {
+    eu_ge[i] <- str_count(banter[i], "\u03B5\u1F56 \U03B3(\U03b5|\U03AD)[.,;· ]|\u03B5\u1F56 \u03B3\u02BC")
+  }
+  
+  
+  # Whether there's a dh:
+  dh <- list()
+  for (i in 1:length(banter)) {
+    dh[i] <- str_count(banter[i], "( \U03B4\U1f74)[.,;· ]|( \U03B4\U03AE)[. ,;·]")
+  }
+  
+  # Whether there is an alla:
+  alla <- list()
+  for (i in 1:length(banter)) {
+    alla[i] <- str_count(banter[i], "((\u1F00|\u1F04)\u03BB\u03BB(\u03AC|\u1F70|\u03B1)[. ,;·])|(\u1F00\u03BB\u03BB\u02BC)")
+  }
+  
+  # Whether there is an ara (question):
+  ara_question <- list()
+  for (i in 1:length(banter)) {
+    ara_question[i] <- str_count(banter[i], "\u1F06\u03C1\u03B1[. ,;·]")
+  }
+  
+  # Whether there is an ara (conjunction):
+  ara_conj <- list()
+  for (i in 1:length(banter)) {
+    ara_conj[i] <- str_count(banter[i], "\u1F04\u03C1\u03B1[. ,;·]")
+  }
+  
+  # Whether there is a gar:
+  gar <- list()
+  for (i in 1:length(banter)) {
+    gar[i] <- str_count(banter[i], "\u03B3(\u03AC|\u1F70)\u03C1[ ,;·.]")
+  }
+  
+  # Whether there is an au:
+  au <- list()
+  for (i in 1:length(banter)) {
+    au[i] <- str_count(banter[i], "\u03B1\u1F56[. ,;·]")
+  }
+  
+  # Whether there is an oun:
+  oun <- list()
+  for (i in 1:length(banter)) {
+    oun[i] <- str_count(banter[i], "\u03BF\u1F56\u03BD[. ,;·]")
+  }
+  
+  # Whether there is a mhn:
+  mhn <- list()
+  for (i in 1:length(banter)) {
+    mhn[i] <- str_count(banter[i], "\u03BC(\u03AE|\u1F74)\u03BD[. ,;·]")
+  }
+  
+  # Whether there is a pou:
+  pou <- list()
+  for (i in 1:length(banter)) {
+    pou[i] <- str_count(banter[i], "\u03C0\u03BF(\u03C5|\u03CD|\u1FE6)[. ,;·]")
+  }
+  
+  # Whether there is a kaitoi:
+  kaitoi <- list()
+  for (i in 1:length(banter)) {
+    kaitoi[i] <- str_count(banter[i], "\u03BA\u03B1\u03AF\u03C4\u03BF\u03B9")
+  }
+  
+  # Whether there is a mentoi:
+  mentoi <- list()
+  for (i in 1:length(banter)) {
+    mentoi[i] <- str_count(banter[i], "\u03BC\u03AD\u03BD\u03C4\u03BF\u03B9")
+  }
+  
+  # Whether there is a oukoun:
+  oukoun <- list()
+  for (i in 1:length(banter)) {
+    oukoun[i] <- str_count(banter[i], "(\u03BF\u1F50\u03BA\u03BF\u1FE6\u03BD)|(\u03BF\u1F54\u03BA\u03BF\u03C5\u03BD)")
+  }
+  
+  # Whether there is a men by itself:
+  men <- list()
+  for (i in 1:length(banter)) {
+    men[i] <- str_count(banter[i], " \u03BC(\u03AD|\u1F72)\u03BD[ ,;·.]") -
+      str_count(banter[i], " \u03BC(\u03AD|\u1F72)\u03BD[ ,;·].*(\u03B4(\u03AD|\u1F72))[ ,;·.]") -
+      str_count(banter[i], " \u03BC(\u03AD|\u1F72)\u03BD[ ].*\u03BF\u1F56\u03BD[ ,;·.]")
+  }
+  
+  # Whether there is a -per:
+  per <- list()
+  for (i in 1:length(banter)) {
+    per[i] <- str_count(banter[i], "\u03C0\u03B5\u03C1[ ,;·.]")
+  }
+  
+  # Whether there is a toinun:
+  toinun <- list()
+  for (i in 1:length(banter)) {
+    toinun[i] <- str_count(banter[i], "\u03C4\u03BF\u03AF\u03BD\u03C5\u03BD")
+  }
+  
+  # Whether there's a question:
+  question <- list()
+  for (i in 1:length(banter)) {
+    question[i] <- str_count(banter[i], ";")
+  }
+  
+  
+  #Turning it all into a DF:
   df <- tibble(lines = banter, 
                names = names, 
                word_count = as.numeric(banter_length), 
@@ -86,22 +223,18 @@ greek_to_csv <- function(path) {
                men_present = as.numeric(men),
                nontranslatable = dh_present + mhn_present + men_present + non_idiom_ge,
                translatable = gar_present + oun_present + arac_present + per_present,
-               lecture_quotient = (word_count-response)^2)
+               lecture_quotient = (word_count-response)^2,
+               ge_binary = (non_idiom_ge > 0)*1,
+               dh_binary = (dh_present > 0)*1,
+               question_binary = (question > 0)*1,
+               arac_binary = (arac_present > 0)*1,
+               oun_binary = (oun_present > 0)*1)
   
-  # Process the XML, compute necessary columns, and remove duplicates as before
-  df <- remove_duplicates_and_add_lecture_quotient(df)
+  df_2 <- removing_duplicates_adding_lecture_quotient(df)
   
-  # Add binary columns
-  df$ge_binary <- (df$non_idiom_ge > 0) * 1
-  df$dh_binary <- (df$dh_present > 0) * 1
-  df$question_binary <- (df$question > 0) * 1
-  df$arac_binary <- (df$arac_present > 0) * 1
-  df$oun_binary <- (df$oun_present > 0) * 1
-  
-  # Return the final dataframe
-  return(df)
-}
+  return(df_2)
 
+}
 
 
 # Listing all the relevant dialogues
