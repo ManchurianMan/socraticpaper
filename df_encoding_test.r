@@ -259,7 +259,7 @@ get_title <- function(file_path) {
   # Title:
   title <- xml_text(xml_find_all(tlg, xpath = "//titleStmt/title"))
   
-  return(title %in% dialogue_list)  
+  return(trimws(title) %in% dialogue_list)  
 }
 # Set the working directory to where your files are located
 main_dir <- "C:\\Users\\Ben\\Documents\\GitHub\\canonical-greekLit\\data\\tlg0059"

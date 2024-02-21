@@ -1,0 +1,45 @@
+library(tidyverse)
+library(xml2)
+library(tibble)
+library(stringr)
+library(kableExtra)
+library(utf8)
+library(stringi)
+library(patchwork)
+library(ggplot2)
+library(data.table)
+library(XML)
+
+
+get_title <- function(file_path) {
+  tlg <- read_xml(file_path);
+  tlg %>% xml_ns_strip();
+  
+  # Title:
+  title <- xml_text(xml_find_all(tlg, xpath = "//titleStmt/title"))
+  
+  return(title)  
+}
+# Set the working directory to where your files are located
+main_dir <- "C:\\Users\\Ben\\Documents\\GitHub\\canonical-greekLit\\data\\tlg0059"
+
+# List all files you're interested in. Adjust the pattern as necessary.
+subdirs <- list.dirs(main_dir, full.names = TRUE, recursive = FALSE)
+
+# Initialize an empty list to store data frames
+df_list <- list()
+
+# Loop through each subdirectory
+for (file_path in files) {
+  var1 <- get_title(file_path) # Extract title using your function
+  var2 <- file_path
+  
+  # Combine var1 and var2 into a dataframe for this file
+  df <- data.frame(title = var1, filepath = var2)
+  
+  # Append the dataframe to the list
+  df_list[[length(df_list) + 1]] <- df
+}
+
+
+all_files <- bind_rows(df_list)
