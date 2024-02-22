@@ -15,9 +15,9 @@ library(XML)
 
 # source(file = "C:/Users/Ben/ling_soc/df_encoding_test.r", encoding = "UTF-8")
 # # Subsetting the DFs didn't work in RStudio, where I work, so I made the subsets for each of these in base R and saved them as an RDS file. Here's the code I used for that: 
-# not_socrates <- read_rds ("C:\\Users\\Ben\\Desktop\\not_socrates.rds")
-# socrates_only <- read_rds("C:\\Users\\Ben\\Desktop\\socrates_only.rds")
-# socratic_dialogues <- read_rds("C:\\Users\\Ben\\Desktop\\socratic_dialogues.rds")
+not_socrates <- read_rds ("C:\\Users\\Ben\\Desktop\\not_socrates.rds")
+socrates_only <- read_rds("C:\\Users\\Ben\\Desktop\\socrates_only.rds")
+socratic_dialogues <- read_rds("C:\\Users\\Ben\\Desktop\\socratic_dialogues.rds")
 
 
 
